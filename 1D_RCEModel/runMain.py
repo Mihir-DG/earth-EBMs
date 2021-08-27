@@ -16,8 +16,6 @@ import os
 from metpy.units import units
 
 # Importing functions from local pys.
-from analyticFunctions import (
-	surf_airBdry_tempDiff, radiating_pressure, cleaningUp)
 from fluxDivergence_fns import netFlux, heatingRate
 from stoppingCriteria_fn import net_energy_level_in_column
 from modelTimestep import runningModel
@@ -26,6 +24,15 @@ from equilibriumProfiles import eqProfs
 from evolutionVars import evolvingProfs
 from potentialTemperatureProfiles import (
 	potentialTemperature_verticalProfile)
+
+def cleaningUp():
+	CSVs = 'output_runModel'
+	graphs = 'graphs'
+	foldersMain = [CSVs, graphs]
+	for item in foldersMain:
+		for file in os.listdir(item):
+			os.remove(os.path.join(item,file))
+	return 0.
 
 def main():
 	cleaningUp()

@@ -13,13 +13,6 @@ def output_to_csv(timeTaken, olrs, bdry_tempDiff, netEn, surfT, lwFluxNet, swFlu
 		equilibriumWriter.writerow(str(timeTaken))
 		equilibriumWriter.writerow(interface_airPressure_vertCoord)
 		equilibriumWriter.writerow(airPressure_vertCoord)
-
-	with open('output_runModel/weekly_results.csv', mode='w') as weeklyCSV:
-		weeklyWriter = csv.writer(weeklyCSV)
-		weeklyWriter.writerow(olrs)
-		weeklyWriter.writerow((np.array(bdry_tempDiff)).flatten())
-		weeklyWriter.writerow(surfT)
-		weeklyWriter.writerow(netEn)
 	
 	return 0.
 

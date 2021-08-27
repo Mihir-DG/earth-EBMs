@@ -9,7 +9,7 @@ import datetime
 import csv
 from matplotlib import pyplot as plt
 
-from setupMain import surf_airBdry_tempDiff, radiating_pressure, net_energy_level_in_column, netFlux, heatingRate
+from setupMain import *
 
 def runningModel():
 	# Importing components
@@ -32,13 +32,11 @@ def runningModel():
 	state['surface_albedo_for_direct_near_infrared'].values[:] = albedo * 1.5
 	state['ocean_mixed_layer_thickness'].values[:] = 40.
 	state['surface_albedo_for_direct_shortwave'][:] = albedo
-	state['surface_albedo_for_diffuse_shortwave'][:] = np.cos((np.pi)/3) * albedo
+	state['surface_albedo_for_diffuse_shortwave'][:] = np.sin((np.pi)/3) * albedo
 	state['area_type'][:] = 'sea'
 	tp_profiles = np.load('../thermodynamic_profiles.npz')
 	mol_profiles = np.load('../molecule_profiles.npz')
-	print(np.array(mol_profiles).shape)
 	state['air_pressure'].values[:] = tp_profiles['air_pressure'][:, np.newaxis, np.newaxis]
-	#state['air_temperature'].values[:] = tp_profiles['air_temperature'][:, np.newaxis, np.newaxis]
 	state['air_pressure_on_interface_levels'].values[:] = tp_profiles['interface_pressures'][:, np.newaxis, np.newaxis]
 	state['specific_humidity'].values[:] = mol_profiles['specific_humidity'][:, np.newaxis, np.newaxis]*1e-3
 	state['mole_fraction_of_carbon_dioxide_in_air'].values[:] = mol_profiles['carbon_dioxide'][:, np.newaxis, np.newaxis]
@@ -50,14 +48,6 @@ def runningModel():
 	airPressure_vertCoord = np.array(state['air_pressure_on_interface_levels']).flatten()
 	time = datetime.datetime(2020,1,1,0,0,0) # In months (Add 1/168 for each timedelta jump)
 	stop = False
-	radPres = radiating_pressure(state,diagnostics,diff_acceptable)
-	radHt = radPres[1]
-
-	#Creates list for assorted 0d output vars.
-	netEn = [(net_energy_level_in_column(state,diagnostics,diff_acceptable))[0]]
-	bdry_tempDiff = [surf_airBdry_tempDiff(state)]
-	olrs = [(np.array(diagnostics['upwelling_longwave_flux_in_air']).flatten())[-1]]
-	surfT = [(np.array(state['surface_temperature']).flatten())[0]]
 
 	counter = 0
 	errorMargin = 0.5
@@ -69,17 +59,10 @@ def runningModel():
 		counter += 1
 		time = time + timestep
 
-		#Updating appropriate quantities every month
 		if counter % 42*4 == 0:
-			netEn.append((net_energy_level_in_column(state,diagnostics,diff_acceptable))[0])
-			bdry_tempDiff.append(surf_airBdry_tempDiff(state))
-			olrs.append((np.array(diagnostics['upwelling_longwave_flux_in_air']).flatten())[-1])
-			surfT.append((np.array(state['surface_temperature']).flatten())[0])
 			print(counter)
 			print(net_energy_level_in_column(state,diagnostics,diff_acceptable)[0])
-			#print((net_energy_level_in_column(state,diagnostics,diff_acceptable))[0])
-			#print(time - datetime.datetime(2020,1,1,0,0,0))
-			#print("\n")
+			
 		if counter % 500 == 0:
 			print("AIR TEMPERATURE")
 			print(np.array(state['air_temperature'][:]).flatten())
@@ -93,9 +76,11 @@ def runningModel():
 			print((np.array(state['surface_upward_latent_heat_flux'] + state['surface_upward_sensible_heat_flux']).flatten())[0])
 			print("\n SW UP FLUX")
 			print(np.array(state['upwelling_shortwave_flux_in_air'][:]).flatten())
-			# Checking stopping criteria
-			if (abs(net_energy_level_in_column(state,diagnostics,diff_acceptable)[0]) < errorMargin and counter > 1500):
-				stop = True
+			
+		# Checking stopping criteria
+		if (abs(net_energy_level_in_column(state,diagnostics,diff_acceptable)[0]) < errorMargin and counter > 1500):
+			stop = True
+	
 	# Calculating output quantities
 	timeTaken = time - datetime.datetime(2020,1,1,0,0,0)
 	lwFluxNet, lwFluxUp, lwFluxDown = netFlux(state)
@@ -121,9 +106,9 @@ def runningModel():
 	print("\n SW UP FLUX")
 	print(np.array(state['upwelling_shortwave_flux_in_air'][:]).flatten())
 
-	return state, olr, timeTaken, olrs, bdry_tempDiff, netEn, surfT, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord
+	return state, olr, timeTaken, olrs, netEn, surfT, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord
 
-def output_to_csv(timeTaken, olrs, bdry_tempDiff, netEn, surfT, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord):
+def output_to_csv(timeTaken, olrs, netEn, surfT, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord):
 	
 	with open('output_runModel/equilibrium.csv', mode='w') as equilibriumCSV:
 		equilibriumWriter = csv.writer(equilibriumCSV)
@@ -135,19 +120,12 @@ def output_to_csv(timeTaken, olrs, bdry_tempDiff, netEn, surfT, lwFluxNet, swFlu
 		equilibriumWriter.writerow(str(timeTaken))
 		equilibriumWriter.writerow(interface_airPressure_vertCoord)
 		equilibriumWriter.writerow(airPressure_vertCoord)
-
-	with open('output_runModel/weekly_results.csv', mode='w') as weeklyCSV:
-		weeklyWriter = csv.writer(weeklyCSV)
-		weeklyWriter.writerow(olrs)
-		weeklyWriter.writerow((np.array(bdry_tempDiff)).flatten())
-		weeklyWriter.writerow(surfT)
-		weeklyWriter.writerow(netEn)
 	
 	return 0.
 
 def main():
-	state, olr, timeTaken, olrs, bdry_tempDiff, netEn, surfT, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord = runningModel()
-	output_to_csv(timeTaken, olrs, bdry_tempDiff, netEn, surfT, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord)
+	state, olr, timeTaken, olrs, netEn, surfT, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord = runningModel()
+	output_to_csv(timeTaken, olrs , netEn, surfT, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord)
 	print(swFluxNet)
 	print(olr)
 	print(state['surface_temperature'])
