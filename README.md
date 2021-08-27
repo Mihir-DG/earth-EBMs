@@ -1,11 +1,15 @@
 # earth-EBMs
-A hierarchial set of energy balance models parameterized for the Earth system using the Rapid Radiative Transfer Model for GCMs (RRTM-G) as implemented in climt using Python.
+A hierarchial set of energy balance models parameterized for the Earth system using the Rapid Radiative Transfer Model for GCMs (RRTM-G) as implemented in climt using Python. Convection is modeled in the RCE setup as a secondary adjustive mechanism that is activated in regions of radiative instability.
 
 #### Models:
 
 1) 0D Radiative Equilibrium   
 2) 1D Radiative Equilibrium (RE)
 3) 1D Radiative-Convective Equilibrium (RCE)
+
+#### 1D Model Initial Conditions:
+- Planetary Albedo: 0.29
+- Emissivity Coefficient: 0.619 +/- 0.000425
 
 #### 1D Model Initial Conditions:
 - Surface Type: Aquaplanet
