@@ -7,11 +7,11 @@ A hierarchial set of energy balance models parameterized for the Earth system us
 2) 1D Radiative Equilibrium (RE)
 3) 1D Radiative-Convective Equilibrium (RCE)
 
-#### 1D Model Initial Conditions:
+#### 0-D Model Initial Conditions:
 - Planetary Albedo: 0.29
 - Emissivity Coefficient: 0.619 +/- 0.000425
 
-#### 1D Model Initial Conditions:
+#### 1-D Model Initial Conditions:
 - Surface Type: Aquaplanet
 - Cosine zenith angle: 0.5
 - Surface Direct SW Albedo: 0.3
