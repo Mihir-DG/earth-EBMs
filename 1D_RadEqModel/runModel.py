@@ -26,11 +26,11 @@ def runningModel():
 
 	# Setting up model constraints and importing atmospheric constituent data
 	diagnostics, state = time_stepper(state,timestep)
-	state['surface_temperature'][:] = 250
-	state['air_temperature'][:] = 230
-	state['zenith_angle'].values[:] = np.pi/3
+	state['surface_temperature'][:] = 290.
+	state['air_temperature'][:] = 260.
+	state['zenith_angle'].values[:] = 76/90 * np.pi/2
 	state['surface_albedo_for_direct_near_infrared'].values[:] = albedo * 1.5
-	state['ocean_mixed_layer_thickness'].values[:] = 40.
+	state['ocean_mixed_layer_thickness'].values[:] = 1.
 	state['surface_albedo_for_direct_shortwave'][:] = albedo
 	state['surface_albedo_for_diffuse_shortwave'][:] = np.sin((np.pi)/3) * albedo
 	state['area_type'][:] = 'sea'
@@ -50,7 +50,7 @@ def runningModel():
 	stop = False
 
 	counter = 0
-	errorMargin = 0.5
+	errorMargin = 0.1
 
 	# Running to equilibrium
 	while stop == False:
@@ -58,10 +58,9 @@ def runningModel():
 		state.update(diagnostics)
 		counter += 1
 		time = time + timestep
-
 		if counter % 42*4 == 0:
 			print(counter)
-			print(net_energy_level_in_column(state,diagnostics,diff_acceptable)[0])
+			print(net_energy_level_in_column(state,diagnostics,diff_acceptable))
 			
 		if counter % 500 == 0:
 			print("AIR TEMPERATURE")
@@ -78,12 +77,13 @@ def runningModel():
 			print(np.array(state['upwelling_shortwave_flux_in_air'][:]).flatten())
 			
 		# Checking stopping criteria
-		if (abs(net_energy_level_in_column(state,diagnostics,diff_acceptable)[0]) < errorMargin and counter > 1500):
+		if abs(net_energy_level_in_column(state,diagnostics,diff_acceptable)) < errorMargin:
 			stop = True
 	
 	# Calculating output quantities
 	timeTaken = time - datetime.datetime(2020,1,1,0,0,0)
-	lwFluxNet, lwFluxUp, lwFluxDown = netFlux(state)
+	lwFluxNet = np.array(diagnostics['upwelling_longwave_flux_in_air'] - 
+		diagnostics['downwelling_longwave_flux_in_air']).flatten()
 	swFluxNet = np.array(diagnostics['upwelling_shortwave_flux_in_air'] - 
 		diagnostics['downwelling_shortwave_flux_in_air']).flatten()
 	sw_heatRate = np.array(diagnostics['air_temperature_tendency_from_shortwave']).flatten()
@@ -106,9 +106,9 @@ def runningModel():
 	print("\n SW UP FLUX")
 	print(np.array(state['upwelling_shortwave_flux_in_air'][:]).flatten())
 
-	return state, olr, timeTaken, olrs, netEn, surfT, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord
+	return state, timeTaken, olr, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord
 
-def output_to_csv(timeTaken, olrs, netEn, surfT, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord):
+def output_to_csv(timeTaken, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord):
 	
 	with open('output_runModel/equilibrium.csv', mode='w') as equilibriumCSV:
 		equilibriumWriter = csv.writer(equilibriumCSV)
@@ -124,8 +124,8 @@ def output_to_csv(timeTaken, olrs, netEn, surfT, lwFluxNet, swFluxNet, sw_heatRa
 	return 0.
 
 def main():
-	state, olr, timeTaken, olrs, netEn, surfT, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord = runningModel()
-	output_to_csv(timeTaken, olrs , netEn, surfT, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord)
+	state, timeTaken, olr, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord = runningModel()
+	output_to_csv(timeTaken, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord)
 	print(swFluxNet)
 	print(olr)
 	print(state['surface_temperature'])
