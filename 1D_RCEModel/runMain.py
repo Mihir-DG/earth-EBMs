@@ -16,14 +16,10 @@ import os
 from metpy.units import units
 
 # Importing functions from local pys.
-from fluxDivergence_fns import netFlux, heatingRate
 from stoppingCriteria_fn import net_energy_level_in_column
 from modelTimestep import runningModel
 from csv_writer import output_to_csv
 from equilibriumProfiles import eqProfs
-from evolutionVars import evolvingProfs
-from potentialTemperatureProfiles import (
-	potentialTemperature_verticalProfile)
 
 def cleaningUp():
 	CSVs = 'output_runModel'
@@ -36,12 +32,11 @@ def cleaningUp():
 
 def main():
 	cleaningUp()
-	state, olr, timeTaken, olrs, bdry_tempDiff, netEn, surfT, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord = runningModel()
-	output_to_csv(timeTaken, olrs, bdry_tempDiff, netEn, surfT, lwFluxNet, swFluxNet, sw_heatRate, 
-		lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord)
+	state, olr, timeTaken, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, convection_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord = runningModel()
+	output_to_csv(timeTaken, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, convection_heatRate,
+		airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord)
 	eqProfs()
-	#print("\n\n\n\n\n" + str(counter) + "\n")
-	
+
 	
 if __name__ == "__main__":
 	main()

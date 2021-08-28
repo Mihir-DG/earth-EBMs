@@ -13,7 +13,7 @@ def eqProfs():
 		for row in csvRead:
 			dataArr.append(row)
 	dataArr =  [ele for ele in dataArr if ele != []] 
-	lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord = dataArr[0],dataArr[1],dataArr[2], dataArr[3], dataArr[4], dataArr[6], dataArr[7]
+	lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, convection_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord = dataArr[0],dataArr[1],dataArr[2], dataArr[3], dataArr[4], dataArr[5], dataArr[7], dataArr[8]
 	airPressure_vertCoord = [round((float(ele)/100),0) for ele in airPressure_vertCoord] # Conversion to mbar
 	interface_airPressure_vertCoord = [round((float(ele)/100),0) for ele in interface_airPressure_vertCoord]
 	timeTaken = ''.join(dataArr[5])
@@ -29,7 +29,7 @@ def eqProfs():
 	ax.yaxis.set_ticks(np.linspace(1000,10,6))
 	ax.axes.invert_yaxis()
 	ax.set_ylim(1e3, 5.)
-	ax.set_xticks(np.linspace(-350,-475,5))
+	ax.set_xticks(np.linspace(-160,-240,5))
 	ax.plot(swFluxNet,airPressure_vertCoord,'-o')
 	ax.set_xlabel("A - Shortwave Flux Divergence (" + r'W/m$^2$' + ")")
 	ax.set_ylabel("Pressure (mbar)")
@@ -45,7 +45,7 @@ def eqProfs():
 	ax.yaxis.set_ticks(np.linspace(1000,10,6))
 	ax.axes.invert_yaxis()
 	ax.set_ylim(1e3, 5.)
-	ax.set_xticks(np.linspace(160,280,5))
+	ax.set_xticks(np.linspace(100,240,5))
 	ax.plot(lwFluxNet,airPressure_vertCoord,'-o')
 	ax.set_xlabel("B - Longwave Flux Divergence ("+ r'W/m$^2$' + ")")
 	ax.set_ylabel("Pressure (mbar)")
@@ -65,8 +65,7 @@ def eqProfs():
 	ax.set_xticks(np.linspace(-30,30,13))
 	ax.plot(sw_heatRate,interface_airPressure_vertCoord,'-o',color = "orange", label = "SW")
 	ax.plot(lw_heatRate,interface_airPressure_vertCoord,'-o', label = "LW")
-	ax.plot((np.array(sw_heatRate).flatten() + np.array(lw_heatRate).flatten()),
-		interface_airPressure_vertCoord, '--', color='green', label = 'Net')
+	#ax.plot(convection_heatRate, interface_airPressure_vertCoord, '-o', color='red', label = "Conv.")
 	ax.set_xlabel("C - Heating Rates (K)")
 	ax.legend(loc='upper right')
 	ax.set_ylabel("Pressure (mbar)")

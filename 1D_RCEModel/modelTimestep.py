@@ -1,15 +1,14 @@
 from sympl import (
-    AdamsBashforth, PlotFunctionMonitor)
+    AdamsBashforth, get_constant)
 from climt import (
     RRTMGLongwave, RRTMGShortwave,
     EmanuelConvection,
     SimplePhysics, DryConvectiveAdjustment,
     SlabSurface, get_grid,
     get_default_state)
-import datetime
 import numpy as np
 import csv
-import sympl
+import datetime
 from datetime import timedelta
 import matplotlib.pyplot as plt
 import metpy.calc as calc
@@ -17,54 +16,73 @@ import os
 from metpy.units import units
 
 from stoppingCriteria_fn import *
-from analyticFunctions import *
-from fluxDivergence_fns import *
+
 
 def runningModel():
     # Initialize components
     sw = RRTMGShortwave()
     lw = RRTMGLongwave()
     surface = SlabSurface()
-    #convectionScheme = EmanuelConvection()
-    boundary_layer = SimplePhysics(
-      use_external_surface_specific_humidity=True)
-    convection_lapseRateAdjustment = DryConvectiveAdjustment()
-    time_stepper = AdamsBashforth([lw, sw, surface])
+    convection = EmanuelConvection()
+    boundary_layer = SimplePhysics()
+    dryConvection = DryConvectiveAdjustment()
 
     # Set up model state.
-    timestep = timedelta(hours=1)
-    grid = get_grid(nx=1, ny=1, nz=60)  
+    timestep = timedelta(minutes=100)
+    grid = get_grid(nx=1, ny=1, nz=60)
     state = get_default_state([lw, sw, surface,
-    boundary_layer, convection_lapseRateAdjustment], grid_state=grid)
-    albedo = 0.3
+    boundary_layer, convection, dryConvection], grid_state=grid)
+    albedo = 0.25
     # ------ HOLD CURRENT ALBEDO VALUES --> OUTPUTS PLANETARY ALBEDO ~ 0.3
     # ------ CURRENT BEST VALUE: surfT = 255, airT = 225 ==> final surfT = 278, olr = 280 - 18 = 262, albedo = 0.29
     # Importing atmospheric constituent data and updating state
-    diagnostics, state = time_stepper(state,timestep)
-    state['surface_temperature'][:] = 275
-    state['air_temperature'][:] = 250
-    state['zenith_angle'].values[:] = np.pi/3
+    state['surface_temperature'][:] = 290
+    state['air_temperature'][:] = 260
+    state['zenith_angle'].values[:] = 76/90*np.pi/2
     state['surface_albedo_for_direct_near_infrared'].values[:] = albedo * 1.5
-    state['ocean_mixed_layer_thickness'].values[:] = 40.
+    state['ocean_mixed_layer_thickness'].values[:] = 1
     state['surface_albedo_for_direct_shortwave'][:] = albedo
     state['surface_albedo_for_diffuse_shortwave'][:] = np.sin((np.pi)/3) * albedo
     state['area_type'][:] = 'sea'
     tp_profiles = np.load('../thermodynamic_profiles.npz')
     mol_profiles = np.load('../molecule_profiles.npz')
     state['air_pressure'].values[:] = tp_profiles['air_pressure'][:, np.newaxis, np.newaxis]
+    #state['air_temperature'].values = tp_profiles['air_temperature'][:, np.newaxis, np.newaxis]
     state['air_pressure_on_interface_levels'].values[:] = tp_profiles['interface_pressures'][:, np.newaxis, np.newaxis]
     state['specific_humidity'].values[:] = mol_profiles['specific_humidity'][:, np.newaxis, np.newaxis]*1e-3
     state['mole_fraction_of_carbon_dioxide_in_air'].values[:] = mol_profiles['carbon_dioxide'][:, np.newaxis, np.newaxis]
     state['mole_fraction_of_ozone_in_air'].values[:] = mol_profiles['ozone'][:, np.newaxis, np.newaxis]
     state.update()
 
+    # Setting up clouds
+    """p = state['air_pressure'][:]
+    p_interface = state['air_pressure_on_interface_levels'][:]
+    T = state['air_temperature'][:]
+    R = get_constant('gas_constant_of_dry_air', 'J kg^-1 K^-1')
+    g = get_constant('gravitational_acceleration', 'm s^-2')
+    density = p / (R * T)
+    dz = - np.diff(p_interface, axis=0) / (density * g)  # [m]
+    z = np.cumsum(dz) * 10**-3  # [km]
+    ice_density = 0.5 * 10**-3  # [kg m^-3]
+    cloud_base = 10  # [km]
+    cloud_top = 15  # [km]
+    cloud_loc = np.where((z > cloud_base) & (z < cloud_top))
+    area_fraction = 1
+    mass_ice_array = area_fraction * ice_density * dz
+    state['mass_content_of_cloud_ice_in_atmosphere_layer'][:] = mass_ice_array
+    state['cloud_area_fraction_in_atmosphere_layer'][cloud_loc] = area_fraction
+    state.update()"""
+
+    time_stepper = AdamsBashforth([lw, sw, surface, convection])
+
     # Model variables
+    diff_acceptable = 0.5
     airPressure_vertCoord = np.array(state['air_pressure_on_interface_levels']).flatten()
     time = datetime.datetime(2020,1,1,0,0,0) # In months (Add 1/168 for each timedelta jump)
     stop = False
     counter = 0
-    errorMargin = 5.
-
+    errorMargin = 4
+    #print(state['specific_humidity'][:])
     while stop == False:
         # Updating TendencyComponents
         diagnostics, state = time_stepper(state,timestep)
@@ -78,17 +96,17 @@ def runningModel():
         state.update(boundaryDiagnostics)
 
         #Updating convective adjustment
-        convectiveAdjustmentDiagnostics, new_state = convection_lapseRateAdjustment(state, timestep)
+        convectiveAdjustmentDiagnostics, new_state = dryConvection(state, timestep)
         state.update(new_state)
         state.update(convectiveAdjustmentDiagnostics)
 
-        state['eastward_wind'][:] = 5.
+        state['eastward_wind'][:] = 3
         state.update()
 
         # Updating appropriate quantities every month
         if counter % 42*4 == 0:
           print(counter)
-          print(net_energy_level_in_column(state,diagnostics,diff_acceptable)[0])
+          print(net_energy_level_in_column(state,diagnostics,diff_acceptable))
           #print((net_energy_level_in_column(state,diagnostics,diff_acceptable))[0])
           #print(time - datetime.datetime(2020,1,1,0,0,0))
           #print("\n")
@@ -104,10 +122,12 @@ def runningModel():
           print("\n SURFACE FLUXES")
           print((np.array(state['surface_upward_latent_heat_flux'] + state['surface_upward_sensible_heat_flux']).flatten())[0])
           print("\n SW UP FLUX")
-          print(np.array(state['upwelling_shortwave_flux_in_air'][:]).flatten())
+          print(np.array(state['upwelling_shortwave_flux_in_air'][:]).flatten()[-1])
+          print("\n SW DOWN FLUX")
+          print(np.array(state['downwelling_shortwave_flux_in_air'][:]).flatten()[-1])
         
         # Checking stopping criteria
-        if (abs(net_energy_level_in_column(state,diagnostics,diff_acceptable)[0]) < errorMargin and counter > 2500):
+        if (abs(net_energy_level_in_column(state,diagnostics,diff_acceptable)) < errorMargin):
             stop = True
 
     print("AIR TEMPERATURE")
@@ -135,5 +155,6 @@ def runningModel():
     airPressure_vertCoord = np.array(state['air_pressure_on_interface_levels']).flatten()
     interface_airPressure_vertCoord = np.array(state['air_pressure']).flatten()
     olr = (np.array(diagnostics['upwelling_longwave_flux_in_air'][-1]).flatten())[0]
+    convection_heatRate = np.array(diagnostics['air_temperature_tendency_from_convection']).flatten()
 
-    return state, olr, timeTaken, olrs, bdry_tempDiff, netEn, surfT, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord
+    return state, olr, timeTaken, lwFluxNet, swFluxNet, sw_heatRate, lw_heatRate, convection_heatRate, airTemperatureProf, interface_airPressure_vertCoord, airPressure_vertCoord
