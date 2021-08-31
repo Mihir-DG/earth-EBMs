@@ -28,7 +28,7 @@ def runningModel():
     dryConvection = DryConvectiveAdjustment()
 
     # Set up model state.
-    timestep = timedelta(minutes=100)
+    timestep = timedelta(minutes=10)
     grid = get_grid(nx=1, ny=1, nz=60)
     state = get_default_state([lw, sw, surface,
     boundary_layer, convection, dryConvection], grid_state=grid)
