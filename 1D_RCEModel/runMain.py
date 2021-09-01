@@ -40,16 +40,3 @@ def main():
 	
 if __name__ == "__main__":
 	main()
-
-
-"""
-maxTau = 2.84
-	planetary_albedo = 0.29
-	cleaningUp()
-	state, timeTaken, olrs, bdry_tempDiff, netEn, surfT, lwFluxNet, lwFluxUp, lwFluxDown, heatRate, airTemperatureProf = runningModel(maxTau, planetary_albedo)
-	output_to_csv(timeTaken, olrs, bdry_tempDiff, netEn, surfT,
-		lwFluxNet, lwFluxUp, lwFluxDown, heatRate, airTemperatureProf)
-	eqProfs(state)
-	evolvingProfs(state)
-	potentialTemperature_verticalProfile(state)
-	"""
