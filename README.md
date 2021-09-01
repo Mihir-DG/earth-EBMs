@@ -13,7 +13,7 @@ A hierarchial set of energy balance models parameterized for the Earth system us
 
 #### 1-D Model Initial Conditions:
 - Surface Type: Aquaplanet
-- Cosine zenith angle: 0.5
+- Zenith angle: 75 deg.
 - Surface Direct SW Albedo: 0.3
 - Surface Diffuse SW Albedo: 0.259 (0.3 sin(60))
 - Surface Direct Near-Infrared Albedo: 0.45
